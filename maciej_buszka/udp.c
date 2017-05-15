@@ -1,3 +1,8 @@
+/*
+  Maciej Buszka
+  279129
+*/
+
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/ip.h>
@@ -5,6 +10,7 @@
 #include <string.h>
 #include <time.h>
 #include "udp.h"
+#include "util.h"
 
 #define DEBUG 0
 #define TRACE 0
@@ -12,7 +18,6 @@
 #define SERVER_ADDR "156.17.4.30"
 #define DEFAULT_TIMEOUT 50
 #define trace_fun() do { if (TRACE) printf("%s\n", __func__); } while(0)
-
 
 static segment_t window[WINDOW_LEN];
 static size_t next_segment  = 0;
@@ -23,14 +28,20 @@ static int socket_fd;
 void init_connection(uint16_t port) {
   trace_fun();
   server_port = port;
+
   socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
+  if (socket_fd < 0) fail(errno);
+
   struct sockaddr_in server_address;
   bzero (&server_address, sizeof(server_address));
   server_address.sin_family = AF_INET;
   server_address.sin_port = htons(PORT);
   server_address.sin_addr.s_addr = htonl(INADDR_ANY);
 
-  bind(socket_fd, (struct sockaddr*) &server_address, sizeof(server_address));
+  if (0 > bind(socket_fd,
+               (struct sockaddr*) &server_address,
+               sizeof(server_address))) fail(errno);
+
   for (int i=0; i<WINDOW_LEN; i++) {
     window[i].status = STATUS_UNUSED;
   }
@@ -51,6 +62,7 @@ void send_segment(int idx) {
   sendto( socket_fd, buffer, strlen(buffer), 0
         , (struct sockaddr*) &recipient, sizeof(recipient)
         );
+
   window[idx].timeout = DEFAULT_TIMEOUT;
   window[idx].status  = STATUS_SENT;
 }
@@ -101,7 +113,6 @@ int receive_segment() {
   );
 
   if (packet_len < 0) {
-    if (DEBUG) printf("error encountered %s\n", strerror(errno));
     return -errno;
   }
 
@@ -130,8 +141,11 @@ int receive_segment() {
 void store_segments(FILE *file) {
   trace_fun();
   while (window[first_segment].status == STATUS_RECEIVED) {
-    fwrite(window[first_segment].data, sizeof(char),
-           window[first_segment].size, file);
+    fwrite(window[first_segment].data,
+           sizeof(char),
+           window[first_segment].size,
+           file);
+
     window[first_segment].status = STATUS_UNUSED;
     first_segment++;
     first_segment %= WINDOW_LEN;
@@ -185,6 +199,9 @@ void await_segments() {
 
 void handle_segments(FILE *file) {
   trace_fun();
-  while (receive_segment() != -EWOULDBLOCK);
+  int status;
+  while ((status = receive_segment()) != -EWOULDBLOCK) {
+    if (status < 0) fail(-status);
+  };
   store_segments(file);
 }

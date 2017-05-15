@@ -1,3 +1,8 @@
+/*
+  Maciej Buszka
+  279129
+*/
+
 #include <stdint.h>
 
 #define BUFFER_SIZE 1000

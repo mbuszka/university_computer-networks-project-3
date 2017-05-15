@@ -17,7 +17,8 @@
 } while(0)
 
 #define fail(err_number) do {\
-  fprintf(stderr, "%s : %s\n", __func__, strerror(err_number));\
+  int _error_number = err_number;\
+  fprintf(stderr, "%s : %s\n", __func__, strerror(_error_number));\
   exit(1);\
 } while (0)
 
