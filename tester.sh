@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PORT=40001
+PORT=40003
 
 cd maciej_buszka
 make

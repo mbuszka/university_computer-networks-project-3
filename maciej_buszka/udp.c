@@ -16,7 +16,7 @@
 #define TRACE 0
 #define PORT 12345
 #define SERVER_ADDR "156.17.4.30"
-#define DEFAULT_TIMEOUT 50
+#define DEFAULT_TIMEOUT 100
 #define trace_fun() do { if (TRACE) printf("%s\n", __func__); } while(0)
 
 static segment_t window[WINDOW_LEN];
@@ -174,6 +174,8 @@ void resend_segments() {
   trace_fun();
   for (int i=0; i<WINDOW_LEN; i++) {
     if (window[i].status == STATUS_SENT && window[i].timeout < 0) {
+      send_segment(i);
+      send_segment(i);
       send_segment(i);
     }
   }
